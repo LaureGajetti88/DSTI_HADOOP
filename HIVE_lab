@@ -1,0 +1,116 @@
+Ceci est une introduction de commande sur l'utilisation de HIVE.
+
+Faisons un premier Lab sur l'ingestion de fichier format .csv
+Nous possedons dans un des repertoires le fichier drivers.csv, pour pouvez consulter le repertoire
+hadoop_lab pour voir comment importer un fichier en local.
+
+1. Créer un dossier drivers dans votre repertoire de travail hdfs :
+$hdfs dfs -mkdir /user/laure.gajetti-dsti/drivers
+
+2. Transferer le fichier.csv (copier) dans ce dossier drivers : 
+$hdfs dfs -put /tmp/drivers.csv /user/laure.gajetti-dsti/drivers
+Comment pour verifier : 
+$hdfs dfs -ls /user/laure.gajetti-dsti/drivers
+Pour le contenu : 
+$hdfs dfs -cat /user/laure.gajetti-dsti/drivers/drivers.csv
+
+3. connectez vous sur hive en utilisant beeling client : 
+$beeline -u "jdbc:hive2://zoo-1.au.adaltas.cloud:2181,zoo-2.au.adaltas.cloud:2181,zoo-3.au.adaltas.cloud:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2;" --showDbInPrompt=true
+Ensuite nous, nous utilisons un repertoire de nommage, il faut executer :
+$use dsti;
+
+4. Créons une table externe pour le fichier drivers.csv :
+Création de la table externe : 
+CREATE EXTERNAL TABLE IF NOT EXISTS laure_ext_drivers(driverId INT, name STRING, ssn STRING,location STRING,certified STRING, wage_plan STRING) ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE location '/user/laure.gajetti-dsti/drivers/drivers.csv' tblproperties ("skip.header.line.count"="1");
+
+CREATE TABLE IF NOT EXISTS laure_drivers(driverId INT, name STRING, ssn STRING,location STRING, certified STRING, wage_plan STRING) STORED AS ORC;
+
+INSERT INTO laure_drivers SELECT * FROM laure_ext_drivers;
+
+
+TP2 = lab2 :
+IMDB Queries: 
+Site ou se trouve les données : https://www.imdb.com/interfaces/
+Il faut donc importer deux fichiers de titre.
+1) Number of titles with duration superior than 2 hours.
+2) Average duration of titles containing the string "world".
+3) Average rating of titles having the genre "Comedy"
+4) Average rating of titles not having the genre "Comedy"
+
+Bonus:
+5) Top 5 movies directed by Tarantino
+
+Steps :
+1. Connexion sur edge et telechargement des fichiers :
+$ wget https://datasets.imdbws.com/title.ratings.tsv.gz
+$ wget https://datasets.imdbws.com/title.basics.tsv.gz
+On dezip les fichiers à l'aide de commande linux :
+$gunzip title.ratings.tsv.gz
+$gunzip title.basics.tsv.gz
+
+On crée pour chaque fichier :
+- table externe
+-table interne
+- import data
+
+Pour le fichier title.basics.tsv:
+CREATE EXTERNAL TABLE IF NOT EXISTS laure_ext_tbasic(tconst string,titleType string,primaryTitle string,originalTitle string,isAdult boolean,startYear DATE,endYear DATE,runtimeMinutes int,genres array<string>)ROW FORMAT DELIMITED FIELDS TERMINATED BY ' ' STORED AS TEXTFILE location '/user/laure.gajetti-dsti/title/' tblproperties ("skip.header.line.count"="1");
+
+CREATE TABLE IF NOT EXISTS laure_tbasic(tconst string,titleType string,primaryTitle string,originalTitle string,isAdult boolean,startYear DATE,endYear DATE,runtimeMinutes int,genres array<string>)STORED AS ORC;
+
+INSERT INTO laure_tbasic SELECT * FROM laure_ext_tbasic;
+
+Pour le fichier rating :
+CREATE EXTERNAL TABLE IF NOT EXISTS laure_ext_rating(tconst string, averageRating int, numvote int) ROW FORMAT DELIMITED FIELDS TERMINATED BY ' ' STORED AS TEXTFILE location '/user/laure.gajetti-dsti/title/' tblproperties ("skip.header.line.count"="1");
+
+CREATE TABLE IF NOT EXISTS laure_rating (tconst string, averageRating int, numvote int) STORED AS ORC;
+
+INSERT INTO laure_rating SELECT * FROM laure_ext_rating;
+
+Maintenant on peut executer les requetes correspondantes aux questions : 
+1) Number of titles with duration superior than 2 hours.
+SELECT COUNT(*) FROM laure_tbasic WHERE runtimeminutes > 120;
+Resultat:
++-------+
+|  _c0  |
++-------+
+| 1442  |
++-------+
+1 row selected (10,984 seconds)
+
+2) Average duration of titles containing the string "world".
+SELECT AVG(runtimeminutes) FROM laure_tbasic WHERE primaryTitle LIKE "%world%";
+Resultat :
++-------+
+|  _c0  |
++-------+
+| NULL  |
++-------+
+1 row selected (9,508 seconds)
+La création des tables est a reprendre il semblerait que le delimiteur ne soit pas bon ou bien la creation des colonnes
+
+3) Average rating of titles having the genre "Comedy"
+SELECT AVG(averagerating) FROM laure_rating
+JOIN laure_tbasic ON laure_rating.tconst = laure_tbasic.tconst
+WHERE array_contains(laure_tbasic.genres, "Comedy");
+resultat:
++--------+
+|  _c0   |
++--------+
+| 6.375  |
++--------+
+1 row selected (10,219 seconds)
+
+4) Average rating of titles not having the genre "Comedy"
+SELECT AVG(averagerating) FROM laure_rating
+JOIN laure_tbasic ON laure_rating.tconst = laure_tbasic.tconst
+WHERE NOT array_contains(laure_tbasic.genres, "Comedy");
+resultat :
++--------------------+
+|        _c0         |
++--------------------+
+| 337.0684378225553  |
++--------------------+
+1 row selected (14,871 seconds)
+
+Ce tp va être corrigé plus tard
