@@ -1,0 +1,56 @@
+Quelques commandes d'initiation à HDFS : 
+
+Dans le readMe.txt se trouve les indications de matériel et installation des logiciels opensource.
+
+
+Ce lab va vous apprendre à : importer un fichier depuis internet sur votre note edge1 (local), de l'exporter vers votre 
+partition HDFS, mais aussi comment le faire dans l'autre sens. Enfin nous verrons d'autres commandes comme : 
+créer des dossiers, supprimer des dossiers, ou copier au fichier (et astuce renommage).
+
+1. Connecter vous grace à la commande SSH à votre serveur client :
+$ssh laure.gajetti-dsti@edge1.au.adaltas.cloud
+Entrez votre password normalement initialisé lors de l'installation.
+
+2. Importer un fichier depuis internet dans votre home : 
+Pour l'exemple nous choisissons le livre gutenberg se trouvant à l'adresse : http://www.gutenberg.org/files/2701/2701-0.txt
+$ wget http://www.gutenberg.org/files/2701/2701-0.txt
+Cette commande telecharge dans mon repertoire courant le fichier 2701-0.txt, c'est à dire pour ma part à l'adresse : /home/laure.gajett-dsti/
+
+Note importante : Vous devez différencier les différentes zones de travail :
+- en local, c'est à dire sur la partie edg1 = /home/votre-login ici system linux
+- sur la partition hdfs = /user/votre-login ici hdfs dfs
+
+Astuces commandes :
+Pour voir ce qui se trouve dans votre répertoire en local (c'est à dire pour notre installation en linux) :
+$ ls -lah
+Pour voir sur hdfs :
+$ hdfs dfs -ls /
+
+3. Nous allons créer un repertoire sur HDFS et importer le fichier que l'on vient de télécharger dans notre home :
+Creéation d'un dossier :
+$ hdfs dfs -mkdir /user/laure.gajetti-dsti/raw 
+Le nom du dossier sera donc raw et se trouvera dans le repertoire /home/laure.gajetti-dsti/
+
+4. Et maintenant on copie le fichier dans raw :
+$ hdfs dfs -put /home/laure.gajetti-dsti/2701-0.tkt /user/laure.gajetti-dsti/raw/
+Vous pouvez aussi utiliser la commande -cp ou -copyLocalfrom :
+$ hdfs dfs -cp /home/laure.gajetti-dsti/2701-0.tkt /user/laure.gajetti-dsti/raw/
+$ hdfs dfs -copyLocalFrom /home/laure.gajetti-dsti/2701-0.tkt /user/laure.gajetti-dsti/raw/
+
+5.On peut egalement renommer le fichier, par exemple en input.txt
+hdfs dfs -mv /user/laure.gajetti-dsti/ebook.txt /user/laure.gajetti-dsti/input.txt
+Remarque la commande -mv permet de deplacer un fichier = "couper" en le laissant au même endroit celà le remplace mais vous 
+pouvez utiliser cette commande pour deplacer dans un autre repertoire le fichier.
+
+6.Pour voir ce qui se trouve dans le fichier, lire quelques lignes :
+$ hdfs dfs -cat /user/laure.gajetti-dsti/input.txt
+
+7.Pour effacer se fichier : 
+$ hdfs dfs -rm /user/laure.gajetti-dsti/input.txt
+
+8. Pour voir ce qu'il nous reste dans le repertoire :
+$ hdfs dfs -ls /user/laure.gajetti-dsti/
+
+9. Maintenant, faisons dans l'autre sens, nous voulons prendre le fichier coté hdfs et l'envoyer dans notre home local sur 
+edge1 tout en le renommant local.txt :
+$hdfs dfs -get /user/laure.gajetti-dsti/raw/2701-0.txt /home/laure.gajetti-dsti/local.txt
